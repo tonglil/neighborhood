@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	gostats "github.com/GaryBoone/GoStats/stats"
 )
 
 func check(e error) {
@@ -18,6 +21,9 @@ func check(e error) {
 }
 
 func main() {
+	topPtr := flag.Int("top", 0, "The number of nodes to count an average rtt for [0 = all]")
+	flag.Parse()
+
 	fmt.Println("Determining what the neighborhood looks like!")
 	fmt.Println("Finding the rtts from Consul...\n")
 
@@ -52,12 +58,36 @@ func main() {
 	err = cmd.Wait()
 	check(err)
 
-	rtt(nodes)
+	ranked := rtt(nodes)
+
+	for rank, pair := range ranked {
+		fmt.Printf("%v: %v - %vms\n", rank, pair.Key, pair.Value)
+	}
+
+	data := stats(ranked, *topPtr)
+
+	fmt.Printf("\nFor the top %v nodes...\n", data.Count())
+	fmt.Printf("Average: %vms, Min: %vms, Max: %vms\n", data.Mean(), data.Min(), data.Max())
+	fmt.Printf("Standard deviation: %v, Variance: %v\n", data.PopulationStandardDeviation(), data.PopulationVariance())
 
 	return
 }
 
-func rtt(nodes map[string]string) {
+func stats(nodes PairList, count int) gostats.Stats {
+	if count == 0 {
+		count = len(nodes)
+	}
+
+	var d gostats.Stats
+
+	for _, pair := range nodes[:count] {
+		d.Update(pair.Value)
+	}
+
+	return d
+}
+
+func rtt(nodes map[string]string) PairList {
 	times := make(map[string]float64)
 
 	r, _ := regexp.Compile("\\d+.\\d+")
@@ -82,11 +112,7 @@ func rtt(nodes map[string]string) {
 		times[node] = f
 	}
 
-	ranked := ranker(times)
-
-	for rank, pair := range ranked {
-		fmt.Printf("%v: %v - %vms\n", rank, pair.Key, pair.Value)
-	}
+	return ranker(times)
 }
 
 func printCommand(cmd *exec.Cmd) {
