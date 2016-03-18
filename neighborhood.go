@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	gostats "github.com/GaryBoone/GoStats/stats"
 )
 
 func check(e error) {
@@ -62,36 +64,27 @@ func main() {
 		fmt.Printf("%v: %v - %vms\n", rank, pair.Key, pair.Value)
 	}
 
-	avg, min, max := stats(ranked, *topPtr)
+	data := stats(ranked, *topPtr)
 
-	fmt.Printf("For the top %v nodes...\n", *topPtr)
-	fmt.Printf("Average: %vms, Min: %vms, Max: %vms\n", avg, min, max)
+	fmt.Printf("\nFor the top %v nodes...\n", data.Count())
+	fmt.Printf("Average: %vms, Min: %vms, Max: %vms\n", data.Mean(), data.Min, data.Max)
+	fmt.Printf("Standard deviation: %v, Variance: %v\n", data.PopulationStandardDeviation(), data.PopulationVariance())
 
 	return
 }
 
-func stats(nodes PairList, count int) (float64, float64, float64) {
-	var (
-		avg, min, max, sum float64
-	)
-
+func stats(nodes PairList, count int) gostats.Stats {
 	if count == 0 {
 		count = len(nodes)
 	}
 
-	selected := nodes[:count]
+	var d gostats.Stats
 
-	min = selected[0].Value
-	max = selected[count].Value
-	sum = 0
-
-	for _, pair := range selected {
-		sum += pair.Value
+	for _, pair := range nodes[:count] {
+		d.Update(pair.Value)
 	}
 
-	avg = sum / float64(count)
-
-	return avg, min, max
+	return d
 }
 
 func rtt(nodes map[string]string) PairList {
