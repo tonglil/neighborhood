@@ -67,7 +67,7 @@ func main() {
 	data := stats(ranked, *topPtr)
 
 	fmt.Printf("\nFor the top %v nodes...\n", data.Count())
-	fmt.Printf("Average: %vms, Min: %vms, Max: %vms\n", data.Mean(), data.Min, data.Max)
+	fmt.Printf("Average: %vms, Min: %vms, Max: %vms\n", data.Mean(), data.Min(), data.Max())
 	fmt.Printf("Standard deviation: %v, Variance: %v\n", data.PopulationStandardDeviation(), data.PopulationVariance())
 
 	return
