@@ -90,7 +90,7 @@ func stats(nodes PairList, count int) gostats.Stats {
 func rtt(nodes map[string]string) PairList {
 	times := make(map[string]float64)
 
-	r, _ := regexp.Compile("\\d+.\\d+")
+	r, _ := regexp.Compile("(\\d+\\.\\d+) ms")
 
 	for _, node := range nodes {
 		cmd := exec.Command("consul", "rtt", node)
@@ -103,13 +103,15 @@ func rtt(nodes map[string]string) PairList {
 		}
 
 		s := string(output)
-		time := r.FindString(s)
-		f, err := strconv.ParseFloat(time, 64)
-		if err != nil {
-			continue
-		}
+		x := r.FindStringSubmatch(s)
+		if len(x) > 1 {
+			f, err := strconv.ParseFloat(x[1], 64)
+			if err != nil {
+				continue
+			}
 
-		times[node] = f
+			times[node] = f
+		}
 	}
 
 	return ranker(times)
